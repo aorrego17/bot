@@ -3,6 +3,8 @@ import time
 import json
 import requests
 import logging
+from dotenv import load_dotenv
+load_dotenv() # Esto carga las variables del .env en entorno
 
 logging.basicConfig(
     filename='bot_errors.log',
