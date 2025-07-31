@@ -1,2 +1,9 @@
 .env
 venv/
+*.log
+*.pkl
+model_metrics.json
+last_signal.json
+log.txt
+last_update_id.txt
+test_indicators.py

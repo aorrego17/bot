@@ -95,14 +95,28 @@ def cleanup_logs(max_size_mb=5):
             log_event(f"🧼 Log reiniciado automáticamente. Tamaño anterior: {size_mb:.2f} MB.")
     
 # === Notificación por Telegram ===
-def send_telegram(message):
+def send_telegram(message, alert_type="INFO"):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         return "⚠️ Telegram no configurado. No se envió el mensaje."
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+
+    prefix = {
+        "INFO": "ℹ️",
+        "WARNING": "⚠️",
+        "ERROR": "🚨"
+    }.get(alert_type, "")
+
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": f"{prefix} {message}" # Incluye un prefijo en el mensaje si es necesario
+    }
+
     try:
-        requests.post(url, data=payload)
-        return "📨 Mensaje enviado a Telegram correctamente."
+        response = requests.post(url, data=payload)
+        if response.ok:
+            return "📨 Mensaje enviado a Telegram correctamente."
+        else:
+            return f"❌ Error enviando mensaje a Telegram: {response.text}"
     except Exception as e:
         return f"❌ Excepción al enviar mensaje a Telegram: {e}"
 
@@ -146,19 +160,52 @@ def get_price_data(symbol, interval="1h", lookback="30 days ago UTC"):
         'close_time', 'quote_asset_volume', 'number_of_trades',
         'taker_buy_base_volume', 'taker_buy_quote_volume', 'ignore'
     ])
+
+    # Imprime las primeras filas y los nombres de las columnas
+    print("Datos descargados de Binance:")
+    print(df.head())
+    print("Columnas disponibles:", df.columns)
+
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-    df['close'] = pd.to_numeric(df['close'], errors='coerce')
+
+    # Convertir todas las columnas apropiadas a numérico
+    numeric_cols = ['open', 'high', 'low', 'close', 'volume', 'quote_asset_volume', 'taker_buy_base_volume', 'taker_buy_quote_volume']
+    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+    
+    # Verificar la conversión
+    print("Tipos de datos después de conversiones:")
+    print(df.dtypes)
+
+    # Manejo de NaN después de las conversiones
+    df.dropna(subset=['close', 'high', 'low'], inplace=True)
+
     df.set_index('timestamp', inplace=True)
-    return df[['close']].dropna()
+    return df[['close', 'high', 'low']].dropna()
 
 def add_indicators(df):
+    # RSI y EMA
     df['RSI'] = RSIIndicator(close=df['close'], window=14).rsi()
     df['EMA'] = EMAIndicator(close=df['close'], window=20).ema_indicator()
+
+    # MACD
+    macd = MACD(close=df['close'], window_slow=26, window_fast=12, window_sign=9)
+    df['MACD'] = macd.macd() # Línea MACD
+    df['MACD_signal'] = macd.macd_signal() # Línea de señal MACD
+
+    # Bollinger Bands
+    bb = BollingerBands(close=df['close'], window=20, window_dev=2)
+    df['BB_high'] = bb.bollinger_hband()
+    df['BB_low'] = bb.bollinger_lband()
+
+    # ATR
+    atr = AverageTrueRange(high=df['high'], low=df['low'], close=df['close'], window=14)
+    df['ATR'] = atr.average_true_range()
+
     df.dropna(inplace=True)
     df['signal'] = np.select(
         [
-            (df['RSI'] < 30) & (df['close'] < df['EMA']),
-            (df['RSI'] > 70) & (df['close'] > df['EMA'])
+            (df['RSI'] < 30) & (df['close'] < df['EMA']) & (df['MACD'] > df['MACD_signal']),
+            (df['RSI'] > 70) & (df['close'] > df['EMA']) & (df['MACD'] > df['MACD_signal'])
         ],
         [1, -1],
         default=0
@@ -480,6 +527,10 @@ def main():
         if df.empty:
             raise ValueError("❌ DataFrame vacio: No se obtuvieron datos historicos.")
         df = add_indicators(df)
+
+        # Verifica el contenido del DataFrame después de agregar indicadores
+        print("Indicadores añadidos a DataFrame:")
+        print(df.tail()) # Imprime las últimas filas para asegurar que los indicadores fueron añadidos
 
         # Cargar modelo de forma robusta. Si no existe o esta corrupto, se entrena de nuevo
         model = load_or_train_model(df)
