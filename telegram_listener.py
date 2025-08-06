@@ -111,6 +111,8 @@ def poll_telegram():
             data = callback["data"]
             if data.startswith("/"):
                 handle_command(data)
+            else:
+                handle_callback(callback)
             send_reply(callback["id"], "✅ Comando recibido.")
 
         save_last_update_id(update_id)
@@ -123,6 +125,31 @@ def send_reply(callback_id, text):
         "show_alert": False
     }
     safe_post(url, payload, context="send_reply")
+
+def handle_callback(callback):
+    data = callback["data"]
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    STOP_LOSS_DIR = os.path.join(BASE_DIR, "stop_loss")
+
+    # Eliminar archivo stop_loss por símbolo
+    if data.startswith("DEL_"):
+        fname = data.replace("DEL_", "")
+        file_path = os.path.join(STOP_LOSS_DIR, fname)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            send_message(f"🗑️ Archivo {fname} eliminado exitosamente.")
+        else:
+            send_message(f"El archivo {fname} ya no existe.")
+
+    # Ignorar alerta
+    elif data.startswith("IGNORE_"):
+        fname = data.replace("IGNORE_", "")
+        send_message(f"✅ Alerta ignorada para {fname} (no se realizó ninguna acción).")
+
+    # Reiniciar bot (simulado, aquí deberías integrar systemd o similar si quieres acción real)
+    elif data == "RESTART_BOT":
+        send_message("🔄 Solicitud de reinicio enviada (a implementar según tu infraestructura).")
+
 
 def handle_command(command_text):
     print(f"📨 Comando recibido: {command_text}")
