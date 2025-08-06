@@ -1,0 +1,30 @@
+{
+    "markets": [
+        {
+            "symbol": "BTCUSDT",
+            "interval": "1h",
+            "risk_pct": 1,
+            "stop_loss_pct": 5,
+            "take_profit_pct": 10,
+            "trailing_stop_min_drop": 0.2,
+            "strategies": ["RSI_MACD", "EMA_BB", "ATR_RSI", "ML"]
+        },
+        {
+            "symbol": "ETHUSDT",
+            "interval": "1h",
+            "risk_pct": 1,
+            "stop_loss_pct": 5,
+            "take_profit_pct": 10,
+            "strategies": ["RSI_MACD", "EMA_BB"]
+        }
+    ],
+    "telegram_notifications": {
+        "errors": true,
+        "executions": true
+    },
+    "limits": {
+        "max_open_trades": 2,
+        "max_quantity": 0.01,
+        "sleep_seconds": 60
+    }
+}
