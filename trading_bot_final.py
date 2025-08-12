@@ -29,7 +29,6 @@ def get_symbol_lock(symbol):
         symbol_locks[symbol] = threading.Lock()
     return symbol_locks[symbol]
 
-
 def load_config(config_path="config.json"):
     try:
         with open(config_path, 'r') as f:
@@ -140,7 +139,18 @@ def send_telegram(message, alert_type="INFO"):
             return f"❌ Error enviando mensaje a Telegram: {response.text}"
     except Exception as e:
         return f"❌ Excepción al enviar mensaje a Telegram: {e}"
-        
+
+def validate_strategy_types(strategy_names, config):
+    tipos = set()
+    for s in strategy_names:
+        tipo = config.get("strategies_meta", {}).get(s, {}).get("type")
+        if not tipo:
+            raise Exception(f"Estrategia {s} no tiene tipo definido en config.")
+        tipos.add(tipo)
+    if len(tipos) != 1:
+        raise Exception(f"Error: estrategias de tipos distintos en consenso: {tipos}. No se permite operar consenso.")
+    return list(tipos)[0]
+
 # === Datos históricos ===
 @retry_on_exception(max_attempts=3)
 def get_price_data(symbol, interval="1h", lookback="30 days ago UTC"):
@@ -589,6 +599,8 @@ active_strategies = [
     ("ATR_RSI", strategy_atr_rsi)
 ]
 
+
+
 # === Lógica principal. Ejecucion programada: Este script esta diseñado para ejecutarse periodicamente (e.g. cada hora con cron) ===
 def main():
     cleanup_logs() # Limpieza automatica si el log es muy grande
@@ -645,6 +657,13 @@ def main():
 
             check_take_profit(price, symbol)  # (esto solo actualiza el flag y notifica si hace falta)
 
+            try:
+                tipo = validate_strategy_types(strategies_names, config)
+                print(f"Estrategias {strategies_names} configuradas para {symbol}, tipo: {tipo}")
+            except Exception as e:
+                log_event(f"❌ [VALIDACION] {e}")
+                send_telegram(f"🚨 [VALIDACION] {e}")
+                continue
 
             # PIPELINE CONSENSO DE ESTRATEGIAS
             try:
