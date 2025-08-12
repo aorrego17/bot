@@ -26,5 +26,11 @@
         "max_open_trades": 2,
         "max_quantity": 0.01,
         "sleep_seconds": 60
+    },
+    "strategies_meta": {
+        "RSI_MACD": {"type": "tendencia"},
+        "EMA_BB": {"type": "tendencia"},
+        "ATR_RSI": {"type": "tendencia"},
+        "ML": {"type": "tendencia"}
     }
 }
