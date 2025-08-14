@@ -1,8 +1,0 @@
-python-binance
-pandas
-ta
-matplotlib
-scikit-learn
-python-telegram-bot
-joblib
-python-dotenv
