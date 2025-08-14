@@ -1,5 +1,9 @@
+# Virtual env
 .env
+.venv/
 venv/
+
+# Logs
 *.log
 *.pkl
 model_metrics.json
@@ -7,4 +11,21 @@ last_signal.json
 log.txt
 last_update_id.txt
 test_indicators.py
+
+# Python cache
 __pycache__/
+.DS_Store
+*.pyc
+
+# Datos
+data/
+*.csv
+*.xlsx
+
+# Reportes backtesting
+report_*.csv
+*_obs.txt
+
+# VSCode/IDE
+.vscode/
+.idea/
